@@ -6,17 +6,20 @@ using RosMessageTypes.Std;
 using RosMessageTypes.Geometry;
 using RosMessageTypes.Sensor;
 using RosMessageTypes.Nav;
+using MixedReality.Toolkit.UX;
+using UnityEngine.UI;
 
 public class ROS_Publisher : MonoBehaviour
 {
     ROSConnection ros;
-    public string topicName = "/pos_rot";
+    // Robot movemnt variables
+    private string MovementTopic = "/robot/cmd_vel";
+    public MixedReality.Toolkit.UX.Slider VerticalSlider;
+    public MixedReality.Toolkit.UX.Slider HorizontalSlider;
 
     // Instantiate ROS messages to be published
-    RosMessageTypes.Geometry.TwistMsg twist;
+    RosMessageTypes.Geometry.TwistMsg robot_mov_twist;
 
-    // The game object
-    public GameObject cube;
     // Publish the cube's position and rotation every N seconds
     public float publishMessageFrequency = 3f;
 
@@ -26,31 +29,34 @@ public class ROS_Publisher : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        // start the ROS connection
+        // start the ROS connection and create publishers
         ros = ROSConnection.GetOrCreateInstance();
-        ros.RegisterPublisher<RosMessageTypes.Geometry.TwistMsg>(topicName); //just an example
+        ros.RegisterPublisher<RosMessageTypes.Geometry.TwistMsg>(MovementTopic);
 
         // Create a new message to populate
-        twist = new RosMessageTypes.Geometry.TwistMsg();
+        robot_mov_twist = new RosMessageTypes.Geometry.TwistMsg();
     }
 
     // Update is called once per frame
     void Update()
     {
-        timeElapsed += Time.deltaTime;
+        // Robot movement updates ----------------------------------------------------------------------------------------------------
+        float horizontalValue = HorizontalSlider.Value;
+        float verticalValue = VerticalSlider.Value;
 
-        if (timeElapsed > publishMessageFrequency)
-        {
-            cube.transform.rotation = Random.rotation;
+        // Adjust the linear and angular velocities based on slider values
+        float linearVelocity = verticalValue * 2.0f; // Adjust multiplier as needed
+        float angularVelocity = horizontalValue * 2.0f; // Adjust multiplier as needed
 
-            twist = new RosMessageTypes.Geometry.TwistMsg();
+        // Populate Twist message with linear and angular velocities
+        robot_mov_twist.linear.x = linearVelocity;
+        robot_mov_twist.angular.z = angularVelocity;
 
-            // Populate the message as you see fit
+        // Publish the Twist message to ROS
+        ros.Publish(MovementTopic, robot_mov_twist);
 
-            // Finally send the message to server_endpoint.py running in ROS
-            ros.Publish(topicName, twist);
-
-            timeElapsed = 0;
-        }
+        // Debug information
+        Debug.Log($"Linear Velocity: {linearVelocity}, Angular Velocity: {angularVelocity}");
+        // ----------------------------------------------------------------------------------------------------------------------------
     }
 };
